@@ -8,7 +8,7 @@ import {postModel} from './models/post.js'
 
 const app=express()
 connectDB()
-
+app.use(cookieParser())
 app.use(express.urlencoded({extended:true}))
 app.use(express.json())
 app.set("view engine","ejs")
@@ -29,8 +29,8 @@ app.post("/signup",(req,res)=>{
             email,
             password:hash
         })
+        res.redirect("/login")
     })
-    res.redirect("/login")
    
 })
 
@@ -52,14 +52,36 @@ app.post("/login",async (req,res)=>{
     res.redirect("/")
 })
 
+const isLoggedIn=(req,res,next)=>{
+    try {
+        const token=req.cookies.token
+        if(!token){
+           return res.redirect("/login")
+        }
+        const decode=jwt.verify(token,"secret")
+        req.user=decode
+        next()
+    } catch (error) {
+        res.redirect("/login")
+    }
+}
+
 app.get("/logout",(req,res)=>{
     res.clearCookie("token",{path:"/"})
     console.log("hit")
     res.redirect("/")
 })
 
-app.get("/createpost",(req,res)=>{
+app.get("/createpost",isLoggedIn,(req,res)=>{
     res.render("createpost")
+})
+app.post("/createpost",(req,res)=>{
+    
+})
+
+app.get("/profile",isLoggedIn, async (req,res)=>{
+    const user= await userModel.findById(req.user.id)
+    res.render("profile",{user})
 })
 
 app.listen(3000)
